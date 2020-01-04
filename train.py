@@ -1,0 +1,81 @@
+import torch
+import torch.nn as nn
+import torch.nn.functional as F
+from torch.utils.data import DataLoader
+from torch.utils.tensorboard import SummaryWriter
+
+from dataset import SimulatedDataset
+from model import Model, triplet_loss
+
+
+def train(epochs=1000):
+    writer = SummaryWriter()
+
+    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+
+    train_loader = DataLoader(
+        SimulatedDataset("data/mouse/train"), batch_size=32, shuffle=True
+    )
+    test_loader = DataLoader(SimulatedDataset("data/mouse/test"), batch_size=32)
+
+    model = Model(representaton_size=128).to(device)
+
+    optimizer = torch.optim.Adam(model.parameters(), lr=1e-5)
+
+    for epoch in range(epochs):
+        model.train()
+        total_loss = 0.0
+        size = len(train_loader.dataset)
+        for i, (origs, mans, sims) in enumerate(train_loader):
+            origs = origs.to(device)
+            mans = mans.to(device)
+            sims = sims.to(device)
+            optimizer.zero_grad()
+
+            origs_repr = model(origs)
+            mans_repr = model(mans)
+            sims_repr = model(sims)
+
+            loss = triplet_loss(origs_repr, mans_repr, sims_repr)
+            total_loss += loss.item() * origs.size(0)
+            loss.backward()
+            optimizer.step()
+
+        print(f"loss: {total_loss / size}")
+        writer.add_scalar("loss/train", total_loss / size, epoch)
+
+        model.eval()
+        with torch.no_grad():
+            total_loss = 0.0
+            total_accuracy = 0.0
+            size = len(test_loader.dataset)
+            for i, (origs, mans, sims) in enumerate(test_loader):
+                origs = origs.to(device)
+                mans = mans.to(device)
+                sims = sims.to(device)
+
+                origs_repr = model(origs)
+                mans_repr = model(mans)
+                sims_repr = model(sims)
+                loss = triplet_loss(origs_repr, mans_repr, sims_repr)
+                total_loss += loss.item() * origs.size(0)
+
+                sgm_same = F.sigmoid(
+                    1 - torch.sum(torch.abs(origs_repr - mans_repr), dim=-1)
+                )
+                sgm_diff = F.sigmoid(
+                    1 - torch.sum(torch.abs(origs_repr - sims_repr), dim=-1)
+                )
+
+                total_accuracy += (
+                    torch.sum(sgm_same > 0.5) + torch.sum(sgm_diff <= 0.5)
+                ).float() / 2.0
+
+        print(f"test loss: {total_loss / size}")
+        print(f"test acc: {total_accuracy / size}")
+        writer.add_scalar("loss/test", total_loss / size, epoch)
+        writer.add_scalar("acc/test", total_accuracy / size, epoch)
+
+
+if __name__ == "__main__":
+    train()

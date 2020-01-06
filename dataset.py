@@ -14,23 +14,23 @@ default_manipulations = transforms.Compose(
         transforms.RandomOrder(
             [
                 # transforms.RandomAffine(degrees=20),
-                # transforms.RandomPerspective(),
-                RandomText(256, 256, 10),
-                # transforms.RandomRotation(degrees=20),
+                transforms.RandomPerspective(),
+                RandomText(300, 300, 10),
+                transforms.RandomRotation(degrees=20),
                 transforms.RandomHorizontalFlip(p=0.5),
                 transforms.RandomVerticalFlip(p=0.5),
-                # transforms.ColorJitter(brightness=0.5),
+                transforms.ColorJitter(brightness=0.5),
             ]
         ),
-        # transforms.RandomResizedCrop(300),
+        transforms.RandomResizedCrop(256),
     ]
 )
 
 default_transforms = transforms.Compose(
     [
         transforms.Grayscale(),
-        transforms.Resize(256),
-        transforms.CenterCrop(256),
+        transforms.Resize(128),
+        transforms.CenterCrop(128),
         transforms.ToTensor(),
         transforms.Normalize([0.5], [0.5]),
     ]

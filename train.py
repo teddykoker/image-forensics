@@ -14,11 +14,11 @@ def train(epochs=1000):
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
     train_loader = DataLoader(
-        SimulatedDataset("data/mouse/train"), batch_size=32, shuffle=True
+        SimulatedDataset("data/train/bbbc038"), batch_size=128, shuffle=True
     )
-    test_loader = DataLoader(SimulatedDataset("data/mouse/test"), batch_size=32)
+    test_loader = DataLoader(SimulatedDataset("data/test/bbbc038"), batch_size=128)
 
-    model = Model().to(device)
+    model = Model(nin=True).to(device)
 
     optimizer = torch.optim.Adam(model.parameters(), lr=1e-4)
 

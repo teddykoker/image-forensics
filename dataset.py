@@ -4,33 +4,37 @@ import numpy as np
 from pathlib import Path
 from PIL import Image
 
-from manipulations import RandomText
+# from manipulations import RandomText
+import manipulations
 
 
 # See https://pytorch.org/docs/stable/torchvision/ for description of transforms
 default_manipulations = transforms.Compose(
     [
         transforms.Grayscale(),
-        transforms.RandomOrder(
-            [
-                # transforms.RandomAffine(degrees=20),
-                transforms.RandomPerspective(),
-                RandomText(300, 300, 10),
-                transforms.RandomRotation(degrees=20),
-                transforms.RandomHorizontalFlip(p=0.5),
-                transforms.RandomVerticalFlip(p=0.5),
-                transforms.ColorJitter(brightness=0.5),
-            ]
-        ),
-        transforms.RandomResizedCrop(256),
+        transforms.Resize(256),
+        transforms.CenterCrop(256),
+        transforms.RandomPerspective(p=0.5),
+        transforms.RandomRotation(degrees=20),
+        transforms.RandomHorizontalFlip(p=0.5),
+        transforms.RandomVerticalFlip(p=0.5),
+        transforms.CenterCrop(128),
+        manipulations.RandomText(p=0.5),
+        manipulations.RandomRect(p=0.5),
+        manipulations.RandomErase(p=0.5),
+        transforms.ColorJitter(brightness=0.2),
+        transforms.ToTensor(),
+        transforms.Normalize([0.5], [0.5]),
     ]
 )
 
 default_transforms = transforms.Compose(
     [
         transforms.Grayscale(),
-        transforms.Resize(128),
+        transforms.Resize(256),
         transforms.CenterCrop(128),
+        transforms.RandomHorizontalFlip(p=0.5),
+        transforms.RandomVerticalFlip(p=0.5),
         transforms.ToTensor(),
         transforms.Normalize([0.5], [0.5]),
     ]
@@ -61,13 +65,13 @@ class SimulatedDataset(Dataset):
 
         return (
             self.transforms(original),
-            self.transforms(manipulated),
-            self.transforms(similar),
+            self.manipulations(original),
+            self.manipulations(similar),
         )
 
 
 if __name__ == "__main__":
-    dataset = SimulatedDataset("data/mouse/train")
+    dataset = SimulatedDataset("data/train/bbbc038")
     to_img = transforms.ToPILImage()
 
     n = 5

@@ -7,7 +7,7 @@ from model import Model, triplet_acc, triplet_loss, distance
 import matplotlib.pyplot as plt
 
 
-def visualize(lefts, rights, title="fuck"):
+def visualize(lefts, rights):
     f, ax = plt.subplots(
         lefts.shape[0], 2, gridspec_kw={"wspace": 0, "hspace": 0}, squeeze=True
     )

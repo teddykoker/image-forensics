@@ -1,7 +1,7 @@
 # ImageForensics - *Unofficial* PyTorch Implementation
 
-**Learning Manipulation-Invariant Image Similarity for Detecting Re-Use of Images
-in Scientific Publications**
+**Detecting duplication of scientific images with manipulation-invariant image similarity**<br>
+M. Cicconet, H. Elliott, D.L. Richmond, D. Wainstock, M. Walsh<br>
 
 Paper: https://arxiv.org/abs/1802.06515<br>
 Website: https://hms-idac.github.io/ImageForensics<br>

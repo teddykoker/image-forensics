@@ -21,7 +21,7 @@ default_manipulations = transforms.Compose(
         transforms.CenterCrop(128),
         manipulations.RandomText(p=0.5),
         manipulations.RandomRect(p=0.5),
-        manipulations.RandomErase(p=0.5),
+        manipulations.RandomErase(p=0.25),
         transforms.ColorJitter(brightness=0.2),
         transforms.ToTensor(),
         transforms.Normalize([0.5], [0.5]),
@@ -57,16 +57,15 @@ class SimulatedDataset(Dataset):
         return len(self.fnames)
 
     def __getitem__(self, index):
-        original = Image.open(self.fnames[index])
-        manipulated = self.manipulations(original)
+        anchor = Image.open(self.fnames[index])
 
-        similar_idx = np.random.choice(self.idx[self.idx != index])
-        similar = Image.open(self.fnames[similar_idx])
+        diff_idx = np.random.choice(self.idx[self.idx != index])
+        diff = Image.open(self.fnames[diff_idx])
 
         return (
-            self.transforms(original),
-            self.manipulations(original),
-            self.manipulations(similar),
+            self.transforms(anchor),
+            self.manipulations(anchor),
+            self.manipulations(diff),
         )
 
 

@@ -8,66 +8,69 @@ from dataset import SimulatedDataset
 from model import Model, triplet_loss, triplet_acc
 
 
-def train(epochs=1000):
-    writer = SummaryWriter()
+def train():
+    writer = SummaryWriter()  # tensorboard
 
+    # TODO: these should be command line args with the following as defaults
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+    bs = 128  # batch size
+    lr = 1e-4  # learning rate
+    epochs = 100  # number of epochs
+    train_dir = "data/train/bbbc038"
+    valid_dir = "data/test/bbbc038"
 
-    train_loader = DataLoader(
-        SimulatedDataset("data/train/bbbc038"), batch_size=128, shuffle=True
-    )
-    test_loader = DataLoader(SimulatedDataset("data/test/bbbc038"), batch_size=128)
+    train_loader = DataLoader(SimulatedDataset(train_dir), batch_size=bs, shuffle=True)
+    valid_loader = DataLoader(SimulatedDataset(valid_dir), batch_size=bs)
 
-    model = Model(nin=True).to(device)
+    model = Model().to(device)
 
-    optimizer = torch.optim.Adam(model.parameters(), lr=1e-4)
+    optimizer = torch.optim.Adam(model.parameters(), lr=lr)
 
     for epoch in range(epochs):
         model.train()
         total_loss = 0.0
         size = len(train_loader.dataset)
-        for i, (origs, mans, sims) in enumerate(train_loader):
-            origs = origs.to(device)
-            mans = mans.to(device)
-            sims = sims.to(device)
+
+        # train step
+        for i, (anchor_imgs, same_imgs, diff_imgs) in enumerate(train_loader):
             optimizer.zero_grad()
+            anchor = model(anchor_imgs.to(device))
+            same = model(same_imgs.to(device))
+            diff = model(diff_imgs.to(device))
 
-            origs_repr = model(origs)
-            mans_repr = model(mans)
-            sims_repr = model(sims)
-
-            loss = triplet_loss(origs_repr, mans_repr, sims_repr)
-            total_loss += loss.item() * origs.size(0)
-            loss.backward()
+            loss = triplet_loss(anchor, same, diff)
+            total_loss += loss.item() * anchor.size(0)
+            loss.backward()  # backprop
             optimizer.step()
 
         print(f"loss: {total_loss / size}")
         writer.add_scalar("loss/train", total_loss / size, epoch)
 
+        # validation step
         model.eval()
         with torch.no_grad():
             total_loss = 0.0
             total_accuracy = 0.0
-            size = len(test_loader.dataset)
-            for i, (origs, mans, sims) in enumerate(test_loader):
-                origs = origs.to(device)
-                mans = mans.to(device)
-                sims = sims.to(device)
+            size = len(valid_loader.dataset)
+            for i, (anchor_imgs, same_imgs, diff_imgs) in enumerate(valid_loader):
+                anchor = model(anchor_imgs.to(device))
+                same = model(same_imgs.to(device))
+                diff = model(diff_imgs.to(device))
 
-                origs_repr = model(origs)
-                mans_repr = model(mans)
-                sims_repr = model(sims)
+                loss = triplet_loss(anchor, same, diff)
+                total_loss += loss.item() * anchor.size(0)
+                total_accuracy += triplet_acc(anchor, same, diff) * anchor.size(0)
 
-                loss = triplet_loss(origs_repr, mans_repr, sims_repr)
-                total_loss += loss.item() * origs.size(0)
-                total_accuracy += triplet_acc(
-                    origs_repr, mans_repr, sims_repr
-                ) * origs.size(0)
+        print(f"valid loss: {total_loss / size}")
+        print(f"valid acc: {total_accuracy / size}")
+        writer.add_scalar("loss/valid", total_loss / size, epoch)
+        writer.add_scalar("acc/valid", total_accuracy / size, epoch)
+        writer.flush()
 
-        print(f"test loss: {total_loss / size}")
-        print(f"test acc: {total_accuracy / size}")
-        writer.add_scalar("loss/test", total_loss / size, epoch)
-        writer.add_scalar("acc/test", total_accuracy / size, epoch)
+        if epoch % 100 == 0:
+            torch.save(model.state_dict(), f"models/weights_{epoch}.pth")
+
+    torch.save(model.state_dict(), "models/weights.pth")
 
 
 if __name__ == "__main__":

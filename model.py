@@ -12,10 +12,14 @@ def conv3x3(in_planes, out_planes, bias=True):
 
 
 class ConvLayer(nn.Module):
-    def __init__(self, inplanes, planes, nin=False):
+    def __init__(self, inplanes, planes, nin=False, lrn=False, lrn_size=5):
         super(ConvLayer, self).__init__()
         self.bn = nn.BatchNorm2d(inplanes)
         self.relu = nn.ReLU(inplace=True)
+        if lrn:
+            self.lrn = nn.LocalResponseNorm(lrn_size)
+        else:
+            self.lrn = None
         if nin:
             self.nin = conv1x1(inplanes, inplanes)
         else:
@@ -26,6 +30,9 @@ class ConvLayer(nn.Module):
 
     def forward(self, x):
         out = self.bn(x)
+
+        if self.lrn is not None:
+            out = self.lrn(out)
 
         if self.nin is not None:
             out = self.nin(out)
@@ -40,12 +47,12 @@ class ConvLayer(nn.Module):
 
 
 class Model(nn.Module):
-    def __init__(self, nin=False):
+    def __init__(self, nin=True, lrn=False):
         super(Model, self).__init__()
         self.layer1 = ConvLayer(1, 16)
-        self.layer2 = ConvLayer(16, 32, nin=nin)
-        self.layer3 = ConvLayer(32, 64, nin=nin)
-        self.layer4 = ConvLayer(64, 128, nin=nin)
+        self.layer2 = ConvLayer(16, 32, nin=nin, lrn=lrn)
+        self.layer3 = ConvLayer(32, 64, nin=nin, lrn=lrn)
+        self.layer4 = ConvLayer(64, 128, nin=nin, lrn=lrn)
         if nin:
             self.nin = conv1x1(128, 128)
         else:
@@ -66,26 +73,30 @@ class Model(nn.Module):
         out = out.view(out.size(0), -1)  # flatten
 
         out = self.fc1(out)
-        out = self.relu(out)  # not in original implementation
+        out = self.relu(out)  # ReLU here not in original implementation
         # removed batch norm here
         out = self.fc2(out)
         return out
 
 
+def distance(a, b):
+    return torch.sum(torch.abs(a - b), dim=-1)
+
+
 def _sgm(a, b):
-    return F.sigmoid(1 - torch.sum(torch.abs(a - b), dim=-1))
+    return F.sigmoid(1 - distance(a, b))
 
 
-def triplet_loss(orig, man, sim):
-    sgm_same = _sgm(orig, man)
-    sgm_diff = _sgm(orig, sim)
+def triplet_loss(anchor, same, diff):
+    sgm_same = _sgm(anchor, same)
+    sgm_diff = _sgm(anchor, diff)
     loss = -torch.mean(torch.log(sgm_same) + torch.log(1 - sgm_diff))
     return loss
 
 
-def triplet_acc(orig, man, sim):
-    sgm_same = _sgm(orig, man)
-    sgm_diff = _sgm(orig, sim)
+def triplet_acc(anchor, same, diff):
+    sgm_same = _sgm(anchor, same)
+    sgm_diff = _sgm(anchor, diff)
     return 0.5 * (
         torch.mean((sgm_same > 0.5).float()) + torch.mean((sgm_diff <= 0.5).float())
     )

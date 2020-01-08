@@ -6,6 +6,13 @@ in Scientific Publications**
 Paper: https://arxiv.org/abs/1802.06515<br>
 Website: https://hms-idac.github.io/ImageForensics<br>
 
+Dataset being used to create synthetic data is the [Kaggle 2018 Data Science
+Bowl](https://data.broadinstitute.org/bbbc/BBBC038/) from the Broad Institute
+Bioimage Benchmark Collection. Network architecture has been very slightly
+modified from paper (see `model.py`). Synthetic data is created in `dataset.py`
+using manipulations defined in `manipulations.py` as well as transforms included
+in [torchvision](https://pytorch.org/docs/stable/torchvision/transforms.html).
+
 ## Example Detections
 
 ![correct](figures/correct.png)

@@ -79,6 +79,51 @@ class Model(nn.Module):
         return out
 
 
+class ModelCAM(nn.Module):
+    def __init__(self, model):
+        super(ModelCAM, self).__init__()
+        self.model = model
+        self.gradients = None
+
+    def activations_hook(self, grad):
+        self.gradients = grad
+
+    def activations(self, x):
+        # only conv part of model
+        out = self.model.layer1(x)
+        out = self.model.layer2(out)
+        out = self.model.layer3(out)
+        out = self.model.layer4(out)
+
+        if self.model.nin is not None:
+            out = self.model.nin(out)
+            out = self.model.relu(out)
+        return out
+
+    def forward(self, x):
+        # identical to model
+        out = self.model.layer1(x)
+        out = self.model.layer2(out)
+        out = self.model.layer3(out)
+        out = self.model.layer4(out)
+
+        if self.model.nin is not None:
+            out = self.model.nin(out)
+            out = self.model.relu(out)
+
+        # important addition: register hook to store gradients
+        h = out.register_hook(self.activations_hook)
+
+        # continue as model above
+        out = out.view(out.size(0), -1)  # flatten
+
+        out = self.model.fc1(out)
+        out = self.model.relu(out)  # ReLU here not in original implementation
+        # removed batch norm here
+        out = self.model.fc2(out)
+        return out
+
+
 def distance(a, b):
     return torch.sum(torch.abs(a - b), dim=-1)
 

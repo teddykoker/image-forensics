@@ -7,17 +7,18 @@ from torch.utils.tensorboard import SummaryWriter
 from dataset import SimulatedDataset
 from model import Model, triplet_loss, triplet_acc
 
+# TODO: these should be command line args with the following as defaults
+device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+bs = 128  # batch size
+lr = 1e-4  # learning rate
+epochs = 200  # max number of epochs
+patience = 50  # number of epochs of no improvement before stopping
+train_dir = "data/train/bbbc038"
+valid_dir = "data/valid/bbbc038"
+
 
 def train():
     writer = SummaryWriter()  # tensorboard
-
-    # TODO: these should be command line args with the following as defaults
-    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-    bs = 128  # batch size
-    lr = 1e-4  # learning rate
-    epochs = 100  # number of epochs
-    train_dir = "data/train/bbbc038"
-    valid_dir = "data/test/bbbc038"
 
     train_loader = DataLoader(SimulatedDataset(train_dir), batch_size=bs, shuffle=True)
     valid_loader = DataLoader(SimulatedDataset(valid_dir), batch_size=bs)
@@ -26,9 +27,14 @@ def train():
 
     optimizer = torch.optim.Adam(model.parameters(), lr=lr)
 
+    counter = 0  # epochs since improvement
+    best_loss = float("inf")
+
+    print("train_loss\tvalid_loss\tvalid_acc")
+
     for epoch in range(epochs):
         model.train()
-        total_loss = 0.0
+        train_loss = 0.0
         size = len(train_loader.dataset)
 
         # train step
@@ -39,17 +45,15 @@ def train():
             diff = model(diff_imgs.to(device))
 
             loss = triplet_loss(anchor, same, diff)
-            total_loss += loss.item() * anchor.size(0)
+            train_loss += loss.item() * anchor.size(0)
             loss.backward()  # backprop
             optimizer.step()
-
-        print(f"loss: {total_loss / size}")
-        writer.add_scalar("loss/train", total_loss / size, epoch)
+        train_loss /= size
 
         # validation step
         model.eval()
         with torch.no_grad():
-            total_loss = 0.0
+            valid_loss = 0.0
             total_accuracy = 0.0
             size = len(valid_loader.dataset)
             for i, (anchor_imgs, same_imgs, diff_imgs) in enumerate(valid_loader):
@@ -58,19 +62,30 @@ def train():
                 diff = model(diff_imgs.to(device))
 
                 loss = triplet_loss(anchor, same, diff)
-                total_loss += loss.item() * anchor.size(0)
+                valid_loss += loss.item() * anchor.size(0)
                 total_accuracy += triplet_acc(anchor, same, diff) * anchor.size(0)
+        valid_loss /= size
+        total_accuracy /= size
 
-        print(f"valid loss: {total_loss / size}")
-        print(f"valid acc: {total_accuracy / size}")
-        writer.add_scalar("loss/valid", total_loss / size, epoch)
-        writer.add_scalar("acc/valid", total_accuracy / size, epoch)
+        print(f"{train_loss:.3f}\t{valid_loss:.3f}\t{total_accuracy:.4f}")
+        writer.add_scalar("loss/train", train_loss, epoch)
+        writer.add_scalar("loss/valid", valid_loss, epoch)
+        writer.add_scalar("acc/valid", total_accuracy, epoch)
         writer.flush()
 
-        if epoch % 100 == 0:
-            torch.save(model.state_dict(), f"models/weights_{epoch}.pth")
+        # early stopping
+        if valid_loss < best_loss:
+            counter = 0
+            print("new best loss, saving checkpoint...")
+            torch.save(model.state_dict(), f"models/checkpoint_{epoch}.pth")
+            torch.save(model.state_dict(), f"models/weights.pth")
+            best_loss = valid_loss
+        else:
+            counter += 1
 
-    torch.save(model.state_dict(), "models/weights.pth")
+        if counter > patience:
+            print(f"{patience} epochs without improvement, exiting")
+            break
 
 
 if __name__ == "__main__":

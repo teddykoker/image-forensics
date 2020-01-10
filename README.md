@@ -13,6 +13,28 @@ modified from paper (see `model.py`). Synthetic data is created in `dataset.py`
 using manipulations defined in `manipulations.py` as well as transforms included
 in [torchvision](https://pytorch.org/docs/stable/torchvision/transforms.html).
 
+## Experimental Addition: Grad-CAM
+
+See *why* images are detected as similar using Grad-CAM
+(https://arxiv.org/abs/1610.02391). Example:
+
+**Image**
+
+![](figures/anchor_raw.jpg)
+
+**Manipulated**<br>
+Note rotation, text, change of scale and brightness
+
+![](figures/same_raw.jpg)
+
+**Grad-CAM Image**
+
+![](figures/cam_anchor.jpg)
+
+**Grad-CAM Manipulated**
+
+![](figures/cam_same.jpg)
+
 ## Example Detections
 
 ![correct](figures/correct.png)

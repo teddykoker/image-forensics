@@ -15,8 +15,13 @@ in [torchvision](https://pytorch.org/docs/stable/torchvision/transforms.html).
 
 ## Experimental Addition: Grad-CAM
 
-See *why* images are detected as similar using Grad-CAM
-(https://arxiv.org/abs/1610.02391). Example:
+See *why* images are detected as similar using an approach similar to that of
+Gradient-weighted Class Activation Mapping (Grad-CAM): https://arxiv.org/abs/1610.02391. 
+
+We calculate the gradient of the distance
+between two image representations with respect to the activations of a
+convolutional layer. These gradients are global average pooled, and then
+linearly combined with the original forward activations, creating a heatmap. Example:
 
 **Image**
 

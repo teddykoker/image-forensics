@@ -13,7 +13,7 @@ modified from paper (see `model.py`). Synthetic data is created in `dataset.py`
 using manipulations defined in `manipulations.py` as well as transforms included
 in [torchvision](https://pytorch.org/docs/stable/torchvision/transforms.html).
 
-## Experimental Addition: Grad-CAM
+## Experimental Addition: Gradient-based Localization 
 
 See *why* images are detected as similar using an approach similar to that of
 Gradient-weighted Class Activation Mapping (Grad-CAM): https://arxiv.org/abs/1610.02391. 

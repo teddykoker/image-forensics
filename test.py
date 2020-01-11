@@ -1,3 +1,4 @@
+import argparse
 import torch
 from torch.utils.data import DataLoader
 from torchvision.utils import make_grid
@@ -5,6 +6,21 @@ from torchvision.utils import make_grid
 from dataset import SimulatedDataset
 from model import Model, triplet_acc, triplet_loss, distance
 import matplotlib.pyplot as plt
+
+parser = argparse.ArgumentParser()
+parser.add_argument("--bs", type=int, default=128, help="size of batches")
+parser.add_argument(
+    "--weights", type=str, default="models/weights.pth", help="model weights location"
+)
+parser.add_argument(
+    "--test_dir", type=str, default="data/test/bbbc038", help="test data location"
+)
+
+parser.add_argument(
+    "--display", action="store_true", help="display examples from each batch"
+)
+
+device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
 
 def visualize(lefts, rights):
@@ -20,11 +36,10 @@ def visualize(lefts, rights):
     plt.show()
 
 
-def test():
-    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-    loader = DataLoader(SimulatedDataset("data/test/bbbc038"), batch_size=128)
+def test(opt):
+    loader = DataLoader(SimulatedDataset(opt.test_dir), batch_size=opt.bs)
     model = Model(nin=True).to(device)
-    model.load_state_dict(torch.load("models/weights.pth"))
+    model.load_state_dict(torch.load(opt.weights))
     model.eval()
     with torch.no_grad():
         total_loss = 0.0
@@ -42,13 +57,15 @@ def test():
             same_idx = distance(anchor, same) > 1.0
             diff_idx = distance(anchor, diff) <= 1.0
             correct_idx = distance(anchor, same) < 1.0
-            visualize(anchor_imgs[same_idx], same_imgs[same_idx])
-            visualize(anchor_imgs[diff_idx], diff_imgs[diff_idx])
-            visualize(anchor_imgs[correct_idx][:5], same_imgs[correct_idx][:5])
+            if opt.display:
+                visualize(anchor_imgs[same_idx], same_imgs[same_idx])
+                visualize(anchor_imgs[diff_idx], diff_imgs[diff_idx])
+                visualize(anchor_imgs[correct_idx][:5], same_imgs[correct_idx][:5])
 
     print(f"loss: {total_loss/ size}")
     print(f"acc: {total_accuracy / size}")
 
 
 if __name__ == "__main__":
-    test()
+    opt = parser.parse_args()
+    test(opt)

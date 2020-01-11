@@ -49,78 +49,28 @@ class ConvLayer(nn.Module):
 class Model(nn.Module):
     def __init__(self, nin=True, lrn=False):
         super(Model, self).__init__()
-        self.layer1 = ConvLayer(1, 16)
-        self.layer2 = ConvLayer(16, 32, nin=nin, lrn=lrn)
-        self.layer3 = ConvLayer(32, 64, nin=nin, lrn=lrn)
-        self.layer4 = ConvLayer(64, 128, nin=nin, lrn=lrn)
+        layers = [
+            ConvLayer(1, 16),
+            ConvLayer(16, 32, nin=nin, lrn=lrn),
+            ConvLayer(32, 64, nin=nin, lrn=lrn),
+            ConvLayer(64, 128, nin=nin, lrn=lrn),
+        ]
         if nin:
-            self.nin = conv1x1(128, 128)
-        else:
-            self.nin = None
-        self.relu = nn.ReLU(inplace=True)
+            layers.append(conv1x1(128, 128))
+            layers.append(nn.ReLU())
+
+        self.features = nn.Sequential(*layers)
+        self.relu = nn.ReLU()
         self.fc1 = nn.Linear(8 * 8 * 128, 1024)
         self.fc2 = nn.Linear(1024, 128)
 
     def forward(self, x):
-        out = self.layer1(x)
-        out = self.layer2(out)
-        out = self.layer3(out)
-        out = self.layer4(out)
-
-        if self.nin is not None:
-            out = self.nin(out)
-            out = self.relu(out)
+        out = self.features(x)
         out = out.view(out.size(0), -1)  # flatten
-
         out = self.fc1(out)
         out = self.relu(out)  # ReLU here not in original implementation
         # removed batch norm here
         out = self.fc2(out)
-        return out
-
-
-class ModelCAM(nn.Module):
-    def __init__(self, model):
-        super(ModelCAM, self).__init__()
-        self.model = model
-        self.gradients = None
-
-    def activations_hook(self, grad):
-        self.gradients = grad
-
-    def activations(self, x):
-        # only conv part of model
-        out = self.model.layer1(x)
-        out = self.model.layer2(out)
-        out = self.model.layer3(out)
-        out = self.model.layer4(out)
-
-        if self.model.nin is not None:
-            out = self.model.nin(out)
-            out = self.model.relu(out)
-        return out
-
-    def forward(self, x):
-        # identical to model
-        out = self.model.layer1(x)
-        out = self.model.layer2(out)
-        out = self.model.layer3(out)
-        out = self.model.layer4(out)
-
-        if self.model.nin is not None:
-            out = self.model.nin(out)
-            out = self.model.relu(out)
-
-        # important addition: register hook to store gradients
-        h = out.register_hook(self.activations_hook)
-
-        # continue as model above
-        out = out.view(out.size(0), -1)  # flatten
-
-        out = self.model.fc1(out)
-        out = self.model.relu(out)  # ReLU here not in original implementation
-        # removed batch norm here
-        out = self.model.fc2(out)
         return out
 
 

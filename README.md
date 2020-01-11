@@ -44,6 +44,8 @@ Note rotation, text, change of scale and brightness
 
 ![correct](figures/correct.png)
 
+# Usage
+
 ## Requirements
 
  * Tested on Ubuntu 18.04.3 LTS, Python 3.7.5, PyTorch 1.2.0
@@ -58,7 +60,20 @@ make download
 ## Train
 
 ```shell
-python train.py
+python train.py -h
+usage: train.py [-h] [--n_epochs N_EPOCHS] [--patience PATIENCE] [--bs BS]
+                [--lr LR] [--train_dir TRAIN_DIR] [--valid_dir VALID_DIR]
+
+optional arguments:
+  -h, --help            show this help message and exit
+  --n_epochs N_EPOCHS   max number of epochs
+  --patience PATIENCE   number of epochs without improvement before stopping
+  --bs BS               size of batches
+  --lr LR               learning rate
+  --train_dir TRAIN_DIR
+                        training data location
+  --valid_dir VALID_DIR
+                        validation data location
 ```
 
 ## Test
@@ -66,7 +81,30 @@ python train.py
 View test examples
 
 ```shell
-python test.py
+python test.py -h
+usage: test.py [-h] [--bs BS] [--weights WEIGHTS] [--test_dir TEST_DIR]
+               [--display]
+
+optional arguments:
+  -h, --help           show this help message and exit
+  --bs BS              size of batches
+  --weights WEIGHTS    model weights location
+  --test_dir TEST_DIR  test data location
+  --display            display examples from each batch
+```
+
+## Gradient Localization
+
+Creates example gradient localization
+
+```shell
+python grad_loc.py -h
+usage: grad_loc.py [-h] [--weights WEIGHTS] [--test_dir TEST_DIR]
+
+optional arguments:
+  -h, --help           show this help message and exit
+  --weights WEIGHTS    model weights location
+  --test_dir TEST_DIR  test data location
 ```
 
 ## Example Incorrect Predictions

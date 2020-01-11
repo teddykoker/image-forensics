@@ -1,38 +1,53 @@
+import argparse
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
 from torch.utils.data import DataLoader
 from torch.utils.tensorboard import SummaryWriter
 
 from dataset import SimulatedDataset
 from model import Model, triplet_loss, triplet_acc
 
-# TODO: these should be command line args with the following as defaults
+parser = argparse.ArgumentParser()
+parser.add_argument("--n_epochs", type=int, default=200, help="max number of epochs")
+parser.add_argument(
+    "--patience",
+    type=int,
+    default=50,
+    help="number of epochs without improvement before stopping",
+)
+parser.add_argument("--bs", type=int, default=128, help="size of batches")
+parser.add_argument("--lr", type=float, default=1e-4, help="learning rate")
+parser.add_argument(
+    "--train_dir", type=str, default="data/train/bbbc038", help="training data location"
+)
+parser.add_argument(
+    "--valid_dir",
+    type=str,
+    default="data/valid/bbbc038",
+    help="validation data location",
+)
+
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-bs = 128  # batch size
-lr = 1e-4  # learning rate
-epochs = 200  # max number of epochs
-patience = 50  # number of epochs of no improvement before stopping
-train_dir = "data/train/bbbc038"
-valid_dir = "data/valid/bbbc038"
 
 
-def train():
+def train(opt):
     writer = SummaryWriter()  # tensorboard
 
-    train_loader = DataLoader(SimulatedDataset(train_dir), batch_size=bs, shuffle=True)
-    valid_loader = DataLoader(SimulatedDataset(valid_dir), batch_size=bs)
+    train_loader = DataLoader(
+        SimulatedDataset(opt.train_dir), batch_size=opt.bs, shuffle=True
+    )
+    valid_loader = DataLoader(SimulatedDataset(opt.valid_dir), batch_size=opt.bs)
 
     model = Model().to(device)
 
-    optimizer = torch.optim.Adam(model.parameters(), lr=lr)
+    optimizer = torch.optim.Adam(model.parameters(), lr=opt.lr)
 
     counter = 0  # epochs since improvement
     best_loss = float("inf")
 
     print("train_loss\tvalid_loss\tvalid_acc")
 
-    for epoch in range(epochs):
+    for epoch in range(opt.n_epochs):
         model.train()
         train_loss = 0.0
         size = len(train_loader.dataset)
@@ -83,10 +98,11 @@ def train():
         else:
             counter += 1
 
-        if counter > patience:
-            print(f"{patience} epochs without improvement, exiting")
+        if counter > opt.patience:
+            print(f"{opt.patience} epochs without improvement, exiting")
             break
 
 
 if __name__ == "__main__":
-    train()
+    opt = parser.parse_args()
+    train(opt)

@@ -32,11 +32,11 @@ Note rotation, text, change of scale and brightness
 
 ![](figures/same_raw.jpg)
 
-**Grad-CAM Image**
+**Grad-Loc Image**
 
 ![](figures/cam_anchor.jpg)
 
-**Grad-CAM Manipulated**
+**Grad-Loc Manipulated**
 
 ![](figures/cam_same.jpg)
 
